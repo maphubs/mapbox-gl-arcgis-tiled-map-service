@@ -6,17 +6,17 @@ This is an unofficial plugin, and is not affliated with Mapbox or Esri. 😇
 
 ## Installation
 
-```
+```sh
 npm install mapbox-gl-arcgis-tiled-map-service
 ``` 
 or 
-```
+```sh
 yarn add mapbox-gl-arcgis-tiled-map-service
 ```
 
 ## Usage
 
-```
+```js
 const ArcGISRasterTileSource = require('mapbox-gl-arcgis-tiled-map-service');
 var map = new mapboxgl.Map({
   /* ... */
