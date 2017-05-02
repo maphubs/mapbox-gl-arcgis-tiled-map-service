@@ -17,18 +17,18 @@ yarn add mapbox-gl-arcgis-tiled-map-service
 ## Usage
 
 ```js
-const ArcGISRasterTileSource = require('mapbox-gl-arcgis-tiled-map-service');
+var ArcGISRasterTileSource = require('mapbox-gl-arcgis-tiled-map-service');
 var map = new mapboxgl.Map({
   /* ... */
 });
-map.addSourceType('arcgisraster', ArcGISRasterTileSource, (err) => {
+map.addSourceType('arcgisraster', ArcGISRasterTileSource, function(err) {
   if(err){
     /*do something*/
   }
 });
 
 map.addSource('amazon-human-footprint', {
-    "type": "arcgisraster',
+    "type": "arcgisraster",
     "url": "https://tiles.arcgis.com/tiles/RTK5Unh1Z71JKIiR/arcgis/rest/services/HumanFootprint/MapServer?f=json",
     "tileSize": 256
 });
