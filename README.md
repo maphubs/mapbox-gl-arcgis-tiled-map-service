@@ -2,7 +2,11 @@
 
 This is an unofficial plugin, and is not affliated with Mapbox or Esri. 😇
 
-⚠️Custom sources are still under development and have not yet been publicly documented. This may break with future versions of mapbox-gl. It is currently being used with v0.36.0⚠️
+⚠️🚧 Custom sources are still under development and have not yet been publicly documented. This may break with future versions of mapbox-gl. It is currently being used with v0.36.0 🚧⚠️
+
+🚦Limitations🚦
+ - The map service must be cached as tiles, see http://server.arcgis.com/en/server/latest/get-started/windows/tutorial-creating-a-cached-map-service.htm
+ - The map service must have Web Mercator tiles (srs = 102100 or 3857)
 
 ## Installation
 
