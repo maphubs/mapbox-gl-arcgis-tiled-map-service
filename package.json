@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-arcgis-tiled-map-service",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ArcGIS Tile Map Service custom source plugin for Mapbox GL",
   "main": "dist/mapbox-gl-arcgis-tiled-map-service.js",
   "author": "Kristofor Carle <kris@maphubs.com>",
