@@ -70,7 +70,7 @@ class ArcGISTiledMapServiceSource extends Evented {
     onAdd(map) {
         // set the urls
         const baseUrl = this.url.split('?')[0];
-        this.tileUrl = `${baseUrl} /tile/{z}/{y}/{x}`;
+        this.tileUrl = `${baseUrl}/tile/{z}/{y}/{x}`;
 
         const arcgisonline = new RegExp(/tiles.arcgis(online)?\.com/g);
         if (arcgisonline.test(this.url)) {
