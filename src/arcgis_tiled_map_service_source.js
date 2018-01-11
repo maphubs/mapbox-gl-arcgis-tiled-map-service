@@ -1,39 +1,41 @@
-'use strict';
+// @flow
 
 const util = require('mapbox-gl/src/util/util');
 const ajax = require('mapbox-gl/src/util/ajax');
 const Evented = require('mapbox-gl/src/util/evented');
 const loadArcGISMapServer = require('./load_arcgis_mapserver');
 const TileBounds = require('mapbox-gl/src/source/tile_bounds');
+const Texture = require('mapbox-gl/src/render/texture');
+const helpers = require('./helpers');
 
-//From https://github.com/Leaflet/Leaflet/blob/master/src/core/Util.js
-const _templateRe = /\{ *([\w_]+) *\}/g;
-const _template = function (str, data) {
-    return str.replace(_templateRe, (str, key) => {
-        let value = data[key];
+import type {Source} from 'mapbox-gl/src/source/source';
+import type {OverscaledTileID} from 'mapbox-gl/src/source/tile_id';
+import type Map from 'mapbox-gl/src/ui/map';
+import type Dispatcher from 'mapbox-gl/src/util/dispatcher';
+import type Tile from 'mapbox-gl/src/source/tile';
+import type {Callback} from 'mapbox-gl/src/types/callback';
 
-        if (value === undefined) {
-            throw new Error(`No value provided for variable ${str}`);
+class ArcGISTiledMapServiceSource extends Evented implements Source {
 
-        } else if (typeof value === 'function') {
-            value = value(data);
-        }
-        return value;
-    });
-};
+    type: 'raster' | 'raster-dem';
+    id: string;
+    minzoom: number;
+    maxzoom: number;
+    url: string;
+    scheme: string;
+    tileSize: number;
 
-//From https://github.com/Leaflet/Leaflet/blob/master/src/layer/tile/TileLayer.js
-const _getSubdomain = function (tilePoint, subdomains) {
-    if (subdomains) {
-        const index = Math.abs(tilePoint.x + tilePoint.y) % subdomains.length;
-        return subdomains[index];
-    }
-    return null;
-};
+    bounds: ?[number, number, number, number];
+    tileBounds: TileBounds;
+    roundZoom: boolean;
+    dispatcher: Dispatcher;
+    map: Map;
+    tiles: Array<string>;
 
-class ArcGISTiledMapServiceSource extends Evented {
+    _loaded: boolean;
+    _options: RasterSourceSpecification | RasterDEMSourceSpecification;
 
-    constructor(id, options, dispatcher, eventedParent) {
+    constructor(id: string, options: RasterSourceSpecification | RasterDEMSourceSpecification, dispatcher: Dispatcher, eventedParent: Evented) {
         super();
         this.id = id;
         this.dispatcher = dispatcher;
@@ -45,29 +47,33 @@ class ArcGISTiledMapServiceSource extends Evented {
         this.roundZoom = true;
         this.tileSize = 512;
         this._loaded = false;
-        this.options = options;
+
+        this._options = util.extend({}, options);
         util.extend(this, util.pick(options, ['url', 'scheme', 'tileSize']));
     }
 
     load() {
         this.fire('dataloading', {dataType: 'source'});
-        loadArcGISMapServer(this.options, (err, metadata) => {
+        loadArcGISMapServer(this._options, (err, metadata) => {
             if (err) {
-                return this.fire('error', err);
-            }
-            util.extend(this, metadata);
-            this.setBounds(metadata.bounds);
+                this.fire('error', err);
+            } else if (metadata) {
+                util.extend(this, metadata);
+
+                if (metadata.bounds) {
+                    this.tileBounds = new TileBounds(metadata.bounds, this.minzoom, this.maxzoom);
+                }
 
             // `content` is included here to prevent a race condition where `Style#_updateSources` is called
             // before the TileJSON arrives. this makes sure the tiles needed are loaded once TileJSON arrives
             // ref: https://github.com/mapbox/mapbox-gl-js/pull/4347#discussion_r104418088
             this.fire('data', {dataType: 'source', sourceDataType: 'metadata'});
             this.fire('data', {dataType: 'source', sourceDataType: 'content'});
-
+            }
         });
     }
 
-    onAdd(map) {
+    onAdd(map: Map) {
         // set the urls
         const baseUrl = this.url.split('?')[0];
         this.tileUrl = `${baseUrl}/tile/{z}/{y}/{x}`;
@@ -81,96 +87,81 @@ class ArcGISTiledMapServiceSource extends Evented {
         if (this.token) {
             this.tileUrl += (`?token=${this.token}`);
         }
-        this.load();
+        
         this.map = map;
-    }
-
-    setBounds(bounds) {
-        this.bounds = bounds;
-        if (bounds) {
-            this.tileBounds = new TileBounds(bounds, this.minzoom, this.maxzoom);
-        }
+        this.load();
     }
 
     serialize() {
-        return {
-            type: 'arcgisraster',
-            url: this.url,
-            tileSize: this.tileSize,
-            tiles: this.tiles,
-            bounds: this.bounds,
-        };
+        return util.extend({}, this._options);
     }
 
-    hasTile(coord) {
-        return !this.tileBounds || this.tileBounds.contains(coord, this.maxzoom);
+    hasTile(tileID: OverscaledTileID) {
+        return !this.tileBounds || this.tileBounds.contains(tileID.canonical);
     }
 
-    loadTile(tile, callback) {
+    loadTile(tile: Tile, callback: Callback<void>) {
         //convert to ags coords
-        const tilePoint = tile.coord;
-        const url =  _template(this.tileUrl, util.extend({
-            s: _getSubdomain(tilePoint, this.subdomains),
+        const tilePoint = { z: tile.tileID.overscaledZ, x: tile.tileID.canonical.x, y: tile.tileID.canonical.y };
+
+        const url =  helpers._template(this.tileUrl, util.extend({
+            s: helpers._getSubdomain(tilePoint, this.subdomains),
             z: (this._lodMap && this._lodMap[tilePoint.z]) ? this._lodMap[tilePoint.z] : tilePoint.z, // try lod map first, then just defualt to zoom level
             x: tilePoint.x,
             y: tilePoint.y
         }, this.options));
-        tile.request = ajax.getImage(url, done.bind(this));
-
-        function done(err, img) {
+        tile.request = ajax.getImage({url},  (err, img) => {
             delete tile.request;
 
             if (tile.aborted) {
-                this.state = 'unloaded';
-                return callback(null);
-            }
+                tile.state = 'unloaded';
+                callback(null);
+            } else if (err) {
+                tile.state = 'errored';
+                callback(err);
+            } else if (img) {
+                if (this.map._refreshExpiredTiles) tile.setExpiryData(img);
+                delete (img: any).cacheControl;
+                delete (img: any).expires;
 
-            if (err) {
-                this.state = 'errored';
-                return callback(err);
-            }
+                const context = this.map.painter.context;
+                const gl = context.gl;
+                tile.texture = this.map.painter.getTileTexture(img.width);
+                if (tile.texture) {
+                    tile.texture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE, gl.LINEAR_MIPMAP_NEAREST);
+                    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                } else {
+                    tile.texture = new Texture(context, img, gl.RGBA);
+                    tile.texture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE, gl.LINEAR_MIPMAP_NEAREST);
 
-            if (this.map._refreshExpiredTiles) tile.setExpiryData(img);
-            delete img.cacheControl;
-            delete img.expires;
-
-            const gl = this.map.painter.gl;
-            tile.texture = this.map.painter.getTileTexture(img.width);
-            if (tile.texture) {
-                gl.bindTexture(gl.TEXTURE_2D, tile.texture);
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            } else {
-                tile.texture = gl.createTexture();
-                gl.bindTexture(gl.TEXTURE_2D, tile.texture);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-                if (this.map.painter.extTextureFilterAnisotropic) {
-                    gl.texParameterf(gl.TEXTURE_2D, this.map.painter.extTextureFilterAnisotropic.TEXTURE_MAX_ANISOTROPY_EXT, this.map.painter.extTextureFilterAnisotropicMax);
+                    if (context.extTextureFilterAnisotropic) {
+                        gl.texParameterf(gl.TEXTURE_2D, context.extTextureFilterAnisotropic.TEXTURE_MAX_ANISOTROPY_EXT, context.extTextureFilterAnisotropicMax);
+                    }
                 }
+                gl.generateMipmap(gl.TEXTURE_2D);
 
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-                tile.texture.size = img.width;
+                tile.state = 'loaded';
+
+                callback(null);
             }
-            gl.generateMipmap(gl.TEXTURE_2D);
-
-            tile.state = 'loaded';
-
-            callback(null);
-        }
+        });
     }
 
-    abortTile(tile) {
+    abortTile(tile: Tile, callback: Callback<void>) {
         if (tile.request) {
             tile.request.abort();
             delete tile.request;
         }
+        callback();
     }
 
-    unloadTile(tile) {
+    unloadTile(tile: Tile, callback: Callback<void>) {
         if (tile.texture) this.map.painter.saveTileTexture(tile.texture);
+        callback();
+    }
+
+    hasTransition() {
+        return false;
     }
 }
 

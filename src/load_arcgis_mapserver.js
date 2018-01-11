@@ -99,7 +99,7 @@ module.exports = function(options, callback) {
     };
 
     if (options.url) {
-        ajax.getJSON(options.url, loaded);
+        ajax.getJSON({url: options.url}, loaded);
     } else {
         browser.frame(loaded.bind(null, null, options));
     }

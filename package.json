@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-arcgis-tiled-map-service",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "ArcGIS Tile Map Service custom source plugin for Mapbox GL",
   "main": "dist/mapbox-gl-arcgis-tiled-map-service.js",
   "author": "Kristofor Carle <kris@maphubs.com>",
@@ -35,11 +35,11 @@
   },
   "dependencies": {
     "@mapbox/sphericalmercator": "^1.0.5",
-    "gl": "^4.0.3",
+    "gl": "4.0.4",
     "jsdom": "^9.11.0"
   },
   "peerDependencies": {
-    "mapbox-gl": ">=0.36.0"
+    "mapbox-gl": ">=0.43.0"
   },
   "devDependencies": {
     "babel-eslint": "^7.2.3",
@@ -50,7 +50,7 @@
     "eslint-plugin-flowtype": "^2.32.1",
     "flow-bin": "^0.45.0",
     "flow-remove-types": "^1.2.1",
-    "mapbox-gl": "^0.36.0",
+    "mapbox-gl": "0.43.0",
     "minifyify": "^7.3.5"
   },
   "keywords": [
