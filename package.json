@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-arcgis-tiled-map-service",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "ArcGIS Tile Map Service custom source plugin for Mapbox GL",
   "main": "dist/mapbox-gl-arcgis-tiled-map-service.js",
   "author": "Kristofor Carle <kris@maphubs.com>",
@@ -34,9 +34,7 @@
     "build-min": "mkdir -p dist && browserify src/index.js --debug --plugin [minifyify --map mapbox-gl-arcgis-tiled-map-service.js.map --output dist/mapbox-gl-arcgis-tiled-map-service.js.map] --standalone ArcGISTiledMapServiceSource | derequire > dist/mapbox-gl-arcgis-tiled-map-service.js"
   },
   "dependencies": {
-    "@mapbox/sphericalmercator": "^1.0.5",
-    "gl": "4.0.4",
-    "jsdom": "^9.11.0"
+    "@mapbox/sphericalmercator": "^1.0.5"
   },
   "peerDependencies": {
     "mapbox-gl": ">=0.43.0"
