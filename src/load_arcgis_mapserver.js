@@ -1,8 +1,7 @@
-'use strict';
-const util = require('mapbox-gl/src/util/util');
-const ajax = require('mapbox-gl/src/util/ajax');
-const browser = require('mapbox-gl/src/util/browser');
-const SphericalMercator = require('@mapbox/sphericalmercator');
+import { pick } from 'mapbox-gl/src/util/util';
+import { getJSON } from 'mapbox-gl/src/util/ajax';
+import browser from 'mapbox-gl/src/util/browser';
+import SphericalMercator from '@mapbox/sphericalmercator';
 
 //Contains code from esri-leaflet https://github.com/Esri/esri-leaflet
 const MercatorZoomLevels = {
@@ -37,13 +36,13 @@ const _withinPercentage = function (a, b, percentage) {
     return diff < percentage;
 };
 
-module.exports = function(options, callback) {
+export default function(options, callback) {
     const loaded = function(err, metadata) {
         if (err) {
             return callback(err);
         }
 
-        const result = util.pick(metadata,
+        const result = pick(metadata,
             ['tileInfo', 'initialExtent', 'fullExtent', 'spatialReference', 'tileServers', 'documentInfo']);
 
         result._lodMap = {};
@@ -99,7 +98,7 @@ module.exports = function(options, callback) {
     };
 
     if (options.url) {
-        ajax.getJSON({url: options.url}, loaded);
+        getJSON({url: options.url}, loaded);
     } else {
         browser.frame(loaded.bind(null, null, options));
     }

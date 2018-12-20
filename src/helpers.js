@@ -24,7 +24,7 @@ const _getSubdomain = function (tilePoint, subdomains) {
     return null;
 };
 
-module.exports = {
+export {
     _template,
     _getSubdomain
 };
