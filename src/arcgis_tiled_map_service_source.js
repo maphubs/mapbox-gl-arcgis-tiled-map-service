@@ -7,6 +7,7 @@ import loadArcGISMapServer from './load_arcgis_mapserver';
 import TileBounds from 'mapbox-gl/src/source/tile_bounds';
 import {_template, _getSubdomain} from './helpers';
 import Texture from 'mapbox-gl/src/render/texture';
+import { cacheEntryPossiblyAdded } from 'mapbox-gl/src/util/tile_request_cache';
 
 import type {Source} from 'mapbox-gl/src/source/source';
 import type {OverscaledTileID} from 'mapbox-gl/src/source/tile_id';
@@ -92,6 +93,10 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
         this.load();
     }
 
+    onRemove() {
+
+    }
+
     serialize() {
         return extend({}, this._options);
     }
@@ -139,7 +144,7 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
                 }
 
                 tile.state = 'loaded';
-
+                cacheEntryPossiblyAdded(this.dispatcher);
                 callback(null);
             }
         });
