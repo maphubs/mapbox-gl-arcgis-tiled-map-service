@@ -1,13 +1,15 @@
 // @flow
 
-import { extend, pick } from 'mapbox-gl/src/util/util';
-import { getImage, ResourceType } from 'mapbox-gl/src/util/ajax';
-import { Event, ErrorEvent, Evented } from 'mapbox-gl/src/util/evented';
+import {extend, pick} from 'mapbox-gl/src/util/util';
+
+import {getImage} from 'mapbox-gl/src/util/ajax';
+import {Event, ErrorEvent, Evented} from 'mapbox-gl/src/util/evented';
 import loadArcGISMapServer from './load_arcgis_mapserver';
+// import {postTurnstileEvent, postMapLoadEvent} from 'mapbox-gl/src/util/mapbox';
 import TileBounds from 'mapbox-gl/src/source/tile_bounds';
 import {_template, _getSubdomain} from './helpers';
 import Texture from 'mapbox-gl/src/render/texture';
-import { cacheEntryPossiblyAdded } from 'mapbox-gl/src/util/tile_request_cache';
+import {cacheEntryPossiblyAdded} from 'mapbox-gl/src/util/tile_request_cache';
 
 import type {Source} from 'mapbox-gl/src/source/source';
 import type {OverscaledTileID} from 'mapbox-gl/src/source/tile_id';
@@ -15,6 +17,11 @@ import type Map from 'mapbox-gl/src/ui/map';
 import type Dispatcher from 'mapbox-gl/src/util/dispatcher';
 import type Tile from 'mapbox-gl/src/source/tile';
 import type {Callback} from 'mapbox-gl/src/types/callback';
+// import type {Cancelable} from 'mapbox-gl/src/types/cancelable';
+import type {
+    RasterSourceSpecification,
+    RasterDEMSourceSpecification
+} from 'mapbox-gl/src/style-spec/types';
 
 class ArcGISTiledMapServiceSource extends Evented implements Source {
 
@@ -49,13 +56,15 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
         this.tileSize = 512;
         this._loaded = false;
 
-        this._options = extend({}, options);
+        this._options = extend({type: 'arcgisraster'}, options);
         extend(this, pick(options, ['url', 'scheme', 'tileSize']));
     }
 
     load() {
+        this._loaded = false;
         this.fire(new Event('dataloading', {dataType: 'source'}));
         loadArcGISMapServer(this._options, (err, metadata) => {
+            this._loaded = true;
             if (err) {
                 this.fire(new ErrorEvent(err));
             } else if (metadata) {
@@ -65,13 +74,17 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
                     this.tileBounds = new TileBounds(metadata.bounds, this.minzoom, this.maxzoom);
                 }
 
-            // `content` is included here to prevent a race condition where `Style#_updateSources` is called
-            // before the TileJSON arrives. this makes sure the tiles needed are loaded once TileJSON arrives
-            // ref: https://github.com/mapbox/mapbox-gl-js/pull/4347#discussion_r104418088
-            this.fire(new Event('data', {dataType: 'source', sourceDataType: 'metadata'}));
-            this.fire(new Event('data', {dataType: 'source', sourceDataType: 'content'}));
+                // `content` is included here to prevent a race condition where `Style#_updateSources` is called
+                // before the TileJSON arrives. this makes sure the tiles needed are loaded once TileJSON arrives
+                // ref: https://github.com/mapbox/mapbox-gl-js/pull/4347#discussion_r104418088
+                this.fire(new Event('data', {dataType: 'source', sourceDataType: 'metadata'}));
+                this.fire(new Event('data', {dataType: 'source', sourceDataType: 'content'}));
             }
         });
+    }
+
+    loaded(): boolean {
+        return this._loaded;
     }
 
     onAdd(map: Map) {
@@ -88,7 +101,7 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
         if (this.token) {
             this.tileUrl += (`?token=${this.token}`);
         }
-        
+
         this.map = map;
         this.load();
     }
@@ -133,9 +146,9 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
                 const gl = context.gl;
                 tile.texture = this.map.painter.getTileTexture(img.width);
                 if (tile.texture) {
-                    tile.texture.update(img, { useMipmap: true });
+                    tile.texture.update(img, {useMipmap: true});
                 } else {
-                    tile.texture = new Texture(context, img, gl.RGBA, { useMipmap: true });
+                    tile.texture = new Texture(context, img, gl.RGBA, {useMipmap: true});
                     tile.texture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE, gl.LINEAR_MIPMAP_NEAREST);
 
                     if (context.extTextureFilterAnisotropic) {
@@ -144,7 +157,9 @@ class ArcGISTiledMapServiceSource extends Evented implements Source {
                 }
 
                 tile.state = 'loaded';
+
                 cacheEntryPossiblyAdded(this.dispatcher);
+
                 callback(null);
             }
         });

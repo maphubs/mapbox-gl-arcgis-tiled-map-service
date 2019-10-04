@@ -7,6 +7,7 @@ This is an unofficial plugin, and is not affliated with Mapbox or Esri. 😇
 * version 0.1.2 = tested with mapbox-gl-js v0.36.0
 * version 0.2.0 = tested with mapbox-gl-js v0.43.0
 * version 0.4.0 = tested with mapbox-gl-js v1.1.0
+* version 0.5.0 = tested with mapbox-gl-js v1.4.0
 
 
 🚦Limitations🚦
