@@ -1,5 +1,39 @@
 # Mapbox GL Custom Source for ArcGIS Tiled Map Services
 
+## 2020 UPDATE
+
+This is no longer needed, most tiles services on AGOL, and newer versions of Server for ArcGIS are creating using compatible Web Mercator projections and zoom levels. 
+
+Here is an update to the usage sample below using only the `mapbox-gl-js` built-in raster source:
+
+```js
+var map = new mapboxgl.Map({
+  /* ... */
+});
+
+map.addSource('amazon-human-footprint', {
+    "type": "raster",
+    "url": "https://tiles.arcgis.com/tiles/RTK5Unh1Z71JKIiR/arcgis/rest/services/HumanFootprint/MapServer/tile/{z}/{y}/{x}",
+    "tileSize": 256
+});
+
+map.addLayer({
+  "id": "amazon-human-footprint",
+  "type": "raster",
+  "source": "amazon-human-footprint",
+  "minzoom": 0,
+  "maxzoom": 18,
+  "paint": {
+    "raster-opacity": 75
+  });
+
+```
+
+
+This may still be useful if you need to support older servers, or tile services not using the standard LOD. 
+
+## Original Readme
+
 This is an unofficial plugin, and is not affliated with Mapbox or Esri. 😇
 
 ⚠️🚧 Custom sources are still under development and have not yet been publicly documented. This custom source also depends on code above and beyond the API. This may break with future versions of mapbox-gl. 🚧⚠️
